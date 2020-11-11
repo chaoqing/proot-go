@@ -1,6 +1,9 @@
-PRoot
+PRoot-go
 =====
+PRoot-go has a go command wrapper on original C version of proot to provide smart interface.
 
+PRoot
+=======
 *chroot, mount --bind, and binfmt_misc without privilege/setup for Linux*
 
 Build status
@@ -44,6 +47,8 @@ Dependencies
 - `libarchive <https://libarchive.org>`_
 - `libtalloc <https://talloc.samba.org>`_
 - `uthash <https://troydhanson.github.io/uthash>`_
+
+For Ubuntu, one may install the dependencies with command `sudo apt install libarchive-dev libtalloc-dev uthash-dev`.
 
 Manuals
 =======
