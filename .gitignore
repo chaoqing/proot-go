@@ -16,6 +16,8 @@ src/build.h
 src/care*
 src/loader*
 src/proot*
+src/libproot*
+proot*
 test/*
 !test/*.sh.*
 !test/*.sh

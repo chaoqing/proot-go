@@ -28,6 +28,7 @@ LDFLAGS  += $(shell pkg-config --libs talloc libarchive)
 CARE_LDFLAGS = -larchive
 
 OBJECTS += \
+	cli/main.o		\
 	cli/cli.o		\
 	cli/proot.o		\
 	cli/note.o		\
@@ -177,6 +178,10 @@ OBJIFY = $($(quiet)GEN)									\
 
 proot: $(OBJECTS)
 	$(LINK)
+
+libproot.a: $(OBJECTS)
+	ar rcs $@ $^
+	ranlib $@
 
 care: $(OBJECTS) $(CARE_OBJECTS)
 	$(LINK) $(CARE_LDFLAGS)
