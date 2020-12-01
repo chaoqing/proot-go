@@ -1,0 +1,9 @@
+RootDir: /root
+
+HostHome: /home
+GuestHome: /root
+
+Env:
+  - PATH=$PATH
+
+ExtraOptions:

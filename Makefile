@@ -5,7 +5,7 @@ build: proot-go
 proot-go: libproot
 	go build -o proot-go
 
-libproot:
+libproot: src/GNUmakefile
 	@make -C src libproot.a
 
 clean:

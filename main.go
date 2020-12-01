@@ -15,11 +15,17 @@ import (
 	"proot_go/cmd"
 	"unsafe"
 
+	"github.com/spf13/viper"
+
 	log "github.com/sirupsen/logrus"
 )
 
 const (
 	maxArgsLen = 0xfff
+)
+
+var (
+	viperConfig = viper.New()
 )
 
 func cMain(args []string) {
@@ -39,8 +45,26 @@ func cMain(args []string) {
 }
 
 func main() {
-	args := cmd.PrepareArgs(os.Args)
+	config := &cmd.ProotConfig{}
+	config.Load(viperConfig)
+
+	args := cmd.PrepareArgs(os.Args, config)
 	log.Info(args)
 
 	cMain(args)
+}
+
+func init() {
+	viperConfig.SetConfigName("proot")
+	viperConfig.SetConfigType("yaml")
+
+	viperConfig.AddConfigPath(".")
+
+	cmd.ProotConfig{}.Register(viperConfig)
+
+	if err := viperConfig.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			panic(err)
+		}
+	}
 }

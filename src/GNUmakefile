@@ -181,7 +181,6 @@ proot: $(OBJECTS)
 
 libproot.a: $(OBJECTS)
 	ar rcs $@ $^
-	ranlib $@
 
 care: $(OBJECTS) $(CARE_OBJECTS)
 	$(LINK) $(CARE_LDFLAGS)
