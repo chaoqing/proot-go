@@ -36,10 +36,13 @@ func (config ProotConfig) Register(v *viper.Viper) {
 
 }
 
-func (config *ProotConfig) Load(v *viper.Viper) *ProotConfig {
-	v.Unmarshal(config)
-
-	return config
+func (config *ProotConfig) Load(v *viper.Viper) *ProotConfig {	
+	if err := v.Unmarshal(config); err == nil{
+		return config
+	}else{
+		logger.Warningln("viper load error: ", err)
+		return nil
+	}
 }
 
 func init() {

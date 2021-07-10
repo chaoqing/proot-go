@@ -12,4 +12,7 @@ clean:
 	@make -C src clean
 	rm -rf proot-go
 
+unit-test:
+	go test -timeout 30s -v proot_go/cmd -run Test_prootFlagSet
+
 rebuild: clean build
