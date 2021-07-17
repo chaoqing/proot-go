@@ -97,7 +97,7 @@ func Test_splitArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotGoArgs, gotCArgs, gotCmdArgs := splitArgs(tt.args.binName, tt.args.osArgs)
+			gotGoArgs, gotCArgs, gotCmdArgs := SplitArgs(tt.args.binName, tt.args.osArgs)
 			if !isSameStringArray(gotGoArgs, tt.wantGoArgs) {
 				t.Errorf("splitArgs() gotGoArgs = %v, want %v", gotGoArgs, tt.wantGoArgs)
 			}

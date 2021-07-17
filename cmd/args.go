@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -89,12 +90,12 @@ func prootFlagSet() *flag.FlagSet {
 	return prootFlags
 }
 
-func splitArgs(binName string, args []string) (goArgs []string, cArgs []string, cmdArgs []string){
+func SplitArgs(binName string, args []string) (goArgs []string, cArgs []string, cmdArgs []string){
 	goArgs = make([]string, 0, 5)
 	cArgs = make([]string, 0, len(args))
 	
 	if binName != PROOT_NAME{
-		cmdArgs = append([]string{binName}, args...)
+		cmdArgs = args
 		return goArgs, cArgs, cmdArgs
 	}
 
@@ -115,35 +116,19 @@ func splitArgs(binName string, args []string) (goArgs []string, cArgs []string, 
 	return goArgs, cArgs, cmdArgs
 }
 
-func GetExecutableName(path string) string {
-	_, name := filepath.Split(path)
-
-	if strings.HasPrefix(strings.ToLower(name), PROOT_NAME){
-		return PROOT_NAME
-	}else{
-		return name
-	}
-}
-
-func PrepareArgs(origArgs []string) []string {
-	if len(origArgs) == 0{
-		logger.Fatalln("no args passed")
-	}
-	
-	binName := GetExecutableName(origArgs[0])
-	goArgs, cArgs, cmdArgs := splitArgs(binName, origArgs[1:])
-
-	for _, arg := range goArgs{
-		if arg == "--go-help"{
-			logger.Infoln("Print --go-help here: ", goArgs, VIPER_YAML_EXAMPLE)
-			logger.Debugln("dropping extra flags: ", cArgs, cmdArgs)
-
-			return []string{PROOT_NAME, "--help"}
+func GetExecutableNameAndPath(path string) (dir, name string) {
+	dir, name = filepath.Split(path)
+	if dir == ""{
+		if path, err := exec.LookPath(name); err == nil{
+			dir, _ = filepath.Split(path)
 		}
 	}
-	
-	cArgs = append([]string{PROOT_NAME}, cArgs...)
-	return append(cArgs, cmdArgs...)
+
+	if strings.HasPrefix(strings.ToLower(name), PROOT_NAME){
+		return dir, PROOT_NAME
+	}else{
+		return dir, name
+	}
 }
 
 func init(){
