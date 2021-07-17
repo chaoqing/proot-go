@@ -18,7 +18,7 @@ var (
 
 func GoMain(args []string) {
 	if v, ok := os.LookupEnv("PROOT_VERBOSE"); ok && (v == "1" || strings.ToLower(v) == "true") {
-		logger.Level = logrus.TraceLevel
+		logger.Level = logrus.DebugLevel
 	}
 
 	if len(args) == 0 {
@@ -30,7 +30,7 @@ func GoMain(args []string) {
 
 	for _, arg := range goArgs {
 		if arg == "--go-verbose" {
-			logger.Level = logrus.TraceLevel
+			logger.Level = logrus.DebugLevel
 		}
 	}
 

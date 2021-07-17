@@ -30,8 +30,10 @@ func (opt ViperOption) Register(conf *viper.Viper, flags *flag.FlagSet) {
 		}
 	}
 
+	flagName := ""
+
 	if flags != nil && opt.FlagSuffix != "" {
-		flagName := GO_ARGS_PREFIX[2:] + opt.FlagSuffix
+		flagName = GO_ARGS_PREFIX[2:] + opt.FlagSuffix
 		switch opt.Default.(type) {
 		case []string:
 			flags.StringArray(flagName, opt.Default.([]string), opt.HelpMsg)
@@ -43,8 +45,8 @@ func (opt ViperOption) Register(conf *viper.Viper, flags *flag.FlagSet) {
 			logger.Warningf("not recognized type on %v", opt)
 		}
 
-		if conf != nil {
-			_ = conf.BindPFlag(opt.OptionName, flags.Lookup(opt.FlagSuffix))
+		if conf != nil && opt.OptionName != "" && flagName != ""{
+			_ = conf.BindPFlag(opt.OptionName, flags.Lookup(flagName))
 		}
 	}
 }
@@ -80,15 +82,15 @@ var (
 			EnvName:      "ROOT_PATH",
 			FlagSuffix:   "root",
 			BindFlagName: "-r",
-			Default:      "",
+			Default:      "$$R/",
 			HelpMsg:      "Same as proot '-r *path*' and use '--go-root $$[R|S]:*path*' to bind with '-[R|S]' instead of '-r'",
 		},
 		&ViperOption{
 			OptionName:   "Bind",
-			EnvName:      "BIND",
+			EnvName:      "",
 			FlagSuffix:   "bind",
 			BindFlagName: "-b",
-			Default:      []string{},
+			Default:      []string{"$$ENV:/usr/bin/env"},
 			HelpMsg:      "Same as proot '-b *path*'",
 		},
 		&ViperOption{
@@ -101,26 +103,26 @@ var (
 		},
 		&ViperOption{
 			OptionName:   "DirectoryMap",
-			EnvName:      "DIR_MAP",
-			FlagSuffix:   "dir-map",
+			EnvName:      "",
+			FlagSuffix:   "map",
 			BindFlagName: "",
 			Default:      []string{"$$BIND"},
 			HelpMsg:      "The direcotry map apply to *PATH like Envs and default cwd, use '$$BIND' to include all bind options(which include '-r' bind)",
 		},
 		&ViperOption{
 			OptionName:   "Env",
-			EnvName:      "ENV",
+			EnvName:      "",
 			FlagSuffix:   "env",
 			BindFlagName: "",
-			Default:      []string{},
+			Default:      []string{"PATH","LANG"},
 			HelpMsg:      "Start proot client process with prefix 'env ENV_NAME=ENV_VALUE' if any environment set",
 		},
 		&ViperOption{
 			OptionName:   "RawOption",
-			EnvName:      "RAW_OPTION",
+			EnvName:      "",
 			FlagSuffix:   "raw",
 			BindFlagName: "",
-			Default:      []string{},
+			Default:      []string{"-0"},
 			HelpMsg:      "Raw options which will pass to proot like '-R *path* -S *path*'",
 		},
 	}
@@ -154,9 +156,9 @@ func (config *ProotConfig) Register() *ProotConfig {
 		config.viperConfig.SetEnvPrefix(PROOT_NAME)
 	}
 
-	// for _, opt := range prootGoOptions {
-	// 	opt.Register(config.viperConfig, config.flagConfig)
-	// }
+	for _, opt := range prootGoOptions {
+		opt.Register(config.viperConfig, config.flagConfig)
+	}
 
 	return config
 }
@@ -173,20 +175,18 @@ Flags:
 
 %s
 Raw *proot* helper:
-
-	`
+`
 
 	exampleContent := ""
 
 	if file, err := ioutil.TempFile("", "proot_*.yaml"); err == nil {
 		examplePath := file.Name()
-		logger.Debugln("using temporay file ", examplePath)
+		logger.Traceln("using temporay file ", examplePath)
 		file.Close()
 		defer os.Remove(examplePath)
 
 		v := config.viperConfig
 		v.SetConfigType("yaml")
-		_ = v.ReadConfig(bytes.NewReader([]byte("RootPath: /")))
 		if err := v.WriteConfigAs(examplePath); err == nil {
 			if content, err := ioutil.ReadFile(examplePath); err == nil {
 				exampleContent = fmt.Sprintf(`Example YAML configura file:

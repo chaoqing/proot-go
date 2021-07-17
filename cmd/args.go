@@ -43,7 +43,7 @@ func prootFlagSet() *flag.FlagSet {
 	flagRegex := regexp.MustCompile(`(-[\w]|--\w[\w-]{1,})([ =]\*[^\*]+\*)?(,|$)`)
 	argsHelp := strings.ReplaceAll(strings.TrimSpace(orignalArgsHelp), "\n", ",")
 	for _, arg := range flagRegex.FindAllStringSubmatch(argsHelp, -1){
-		logger.Debugln(arg[1], arg[0])
+		logger.Traceln(arg[1], arg[0])
 		if len(arg[2])==0 {
 			if len(arg[1])==2{
 				boolShortFlags = append(boolShortFlags, arg[1][1:])
