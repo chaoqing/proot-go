@@ -25,4 +25,5 @@ test/*
 !test/*.py
 !test/*.mk
 !test/docker
+!*.go
 .proot.yaml
