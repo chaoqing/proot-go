@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -20,7 +19,6 @@ type ViperOption struct {
 	Default      interface{}
 	HelpMsg      string
 }
-type ViperOptions []*ViperOption
 
 func (opt ViperOption) Register(conf *viper.Viper, flags *flag.FlagSet) {
 	if conf != nil && opt.OptionName != "" {
@@ -51,8 +49,16 @@ func (opt ViperOption) Register(conf *viper.Viper, flags *flag.FlagSet) {
 	}
 }
 
+type ViperOptions []*ViperOption
+
+func (opts ViperOptions) Register(conf *viper.Viper, flags *flag.FlagSet){
+	for _, opt := range opts {
+		opt.Register(conf, flags)
+	}
+}
+
 var (
-	prootGoOptions = ViperOptions{
+	ProotGoOptions = ViperOptions{
 		&ViperOption{
 			OptionName:   "",
 			EnvName:      "",
@@ -146,19 +152,14 @@ type ProotConfig struct {
 	flagConfig  *flag.FlagSet
 }
 
-func (config *ProotConfig) Register() *ProotConfig {
-	if config.flagConfig == nil {
-		config.flagConfig = flag.NewFlagSet(PROOT_NAME, flag.ContinueOnError)
+func NewProotConfig() *ProotConfig {
+	config := &ProotConfig{
+		viperConfig: viper.New(),
+		flagConfig: flag.NewFlagSet(PROOT_NAME, flag.ContinueOnError),
 	}
+	config.viperConfig.SetEnvPrefix(PROOT_NAME)
 
-	if config.viperConfig == nil {
-		config.viperConfig = viper.New()
-		config.viperConfig.SetEnvPrefix(PROOT_NAME)
-	}
-
-	for _, opt := range prootGoOptions {
-		opt.Register(config.viperConfig, config.flagConfig)
-	}
+	ProotGoOptions.Register(config.viperConfig, config.flagConfig)
 
 	return config
 }
@@ -206,8 +207,10 @@ func (config *ProotConfig) Load(args []string) error {
 		logger.Fatalln("proot go command args error: ", err)
 	}
 
-	config.viperConfig.SetConfigName(PROOT_NAME)
-	config.viperConfig.SetConfigType("yaml")
+	v := config.viperConfig
+
+	v.SetConfigName(fmt.Sprintf(".%s", PROOT_NAME))
+	v.SetConfigType("yaml")
 
 	configDir := "."
 	configPath := ""
@@ -218,16 +221,15 @@ func (config *ProotConfig) Load(args []string) error {
 	}
 	if configPath != "" {
 		if info, err := os.Stat(configPath); err == nil && info.IsDir() {
-			config.viperConfig.AddConfigPath(configPath)
+			v.AddConfigPath(configPath)
 			configPath = ""
 			configDir = ""
 		} else if err == nil {
-			if content, err := ioutil.ReadFile(configPath); err == nil {
-				if err := config.viperConfig.ReadConfig(bytes.NewReader(content)); err == nil {
-					configDir = "" // to mark the reading is done
-				} else {
-					logger.Fatalf("error when loading config file <%s>: %v", configPath, err)
-				}
+			logger.Debugln("configure file path: ", configPath)
+			v.SetConfigFile(configPath)
+
+			if err := v.ReadInConfig(); err == nil {
+				configDir = "" // to mark the reading is done
 			} else {
 				logger.Fatalf("error when reading config file <%s>: %v", configPath, err)
 			}
@@ -238,10 +240,10 @@ func (config *ProotConfig) Load(args []string) error {
 
 	if configDir != "" {
 		for {
-			if info, err := os.Stat(configPath); err == nil && info.IsDir() {
-				config.viperConfig.AddConfigPath(configPath)
+			if info, err := os.Stat(configDir); err == nil && info.IsDir() {
+				v.AddConfigPath(configDir)
 
-				configPath = filepath.Join("..", configPath)
+				configDir = filepath.Join("..", configDir)
 			} else {
 				break
 			}
@@ -249,16 +251,17 @@ func (config *ProotConfig) Load(args []string) error {
 	}
 
 	if configPath == "" {
-		if err := config.viperConfig.ReadInConfig(); err != nil {
+		if err := v.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 				return fmt.Errorf("proot-go config file not found")
-			} else {
-				logger.Fatalln("proot-go config load error: ", err)
 			}
+			logger.Fatalln("proot-go config load error: ", err)
+		}else{
+			logger.Debugln("found configure file ", v.ConfigFileUsed())
 		}
 	}
 
-	if err := config.viperConfig.Unmarshal(config); err != nil {
+	if err := v.Unmarshal(config); err != nil {
 		logger.Fatalln("proot-go config load error: ", err)
 	}
 

@@ -39,8 +39,7 @@ func GoMain(args []string) {
 	logger.Debugln("proot args: ", cArgs)
 	logger.Debugln("command args: ", cmdArgs)
 
-	config := &ProotConfig{}
-	config = config.Register()
+	config := NewProotConfig()
 
 	for _, arg := range goArgs {
 		if arg == "--go-help" {

@@ -87,11 +87,12 @@ func prootFlagSet() *flag.FlagSet {
 		prootFlags.StringS(arg, arg, "", "")
 	}
 
+	ProotGoOptions.Register(nil, prootFlags)
+
 	return prootFlags
 }
 
 func SplitArgs(binName string, args []string) (goArgs []string, cArgs []string, cmdArgs []string){
-	goArgs = make([]string, 0, 5)
 	cArgs = make([]string, 0, len(args))
 	
 	if binName != PROOT_NAME{
@@ -101,18 +102,35 @@ func SplitArgs(binName string, args []string) (goArgs []string, cArgs []string, 
 
 	cFlagSet := prootFlagSet()
 	for i, arg := range args{
-		if strings.HasPrefix(strings.ToLower(arg), GO_ARGS_PREFIX){
-			goArgs = append(goArgs, arg)
-		}else{
-			cArgs = append(cArgs, arg)
-			if err := cFlagSet.Parse(cArgs); err==nil && cFlagSet.NArg()==1{
-				cArgs = cArgs[:(len(cArgs)-1)]
-				cmdArgs = args[i:]
+		cArgs = append(cArgs, arg)
+		if err := cFlagSet.Parse(cArgs); err==nil && cFlagSet.NArg()==1{
+			cArgs = cArgs[:(len(cArgs)-1)]
+			cmdArgs = args[i:]
 
-				break
-			}
+			break
 		}
 	}
+
+	goArgs = make([]string, 0, len(cArgs))
+	i := 0
+	j := 0
+	for j<len(cArgs){
+		if strings.HasPrefix(strings.ToLower(cArgs[j]), GO_ARGS_PREFIX){
+			goArgs = append(goArgs, cArgs[j])
+			j++
+
+			if j<len(cArgs) && !strings.HasPrefix(strings.ToLower(cArgs[j]), "-"){
+				goArgs = append(goArgs, cArgs[j])
+				j++
+			}
+		}else{
+			cArgs[i] = cArgs[j]
+			j++
+			i++
+		}
+	}
+	cArgs = cArgs[:i]
+
 	return goArgs, cArgs, cmdArgs
 }
 
