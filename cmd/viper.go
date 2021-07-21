@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/spf13/viper"
+	"github.com/yookoala/realpath"
 
 	flag "github.com/spf13/pflag"
 )
@@ -265,13 +269,147 @@ func (config *ProotConfig) Load() error {
 		logger.Fatalln("proot-go config load error: ", err)
 	}
 
-	logger.Debugln(config)
-
 	return nil
 }
 
+const ENV = "env"
+func searchEnv() string{
+	if envPath, err := exec.LookPath(ENV); err==nil{
+		if path, err := realpath.Realpath(envPath); err==nil{
+			return path
+		}
+	}
+
+	return ""
+}
+
+type  dirMapRelation struct{
+	hostDir string
+	clientDir string
+}
+
+type  dirMapRelations []dirMapRelation
+func (a dirMapRelations) Len() int {
+	return len(a)
+}
+  
+func (a dirMapRelations) Less(i, j int) bool {
+	return len(a[i].hostDir) < len(a[j].hostDir)
+}
+
+func (a dirMapRelations) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func CleanPathMap(host2client map[string]string) func(string) string{
+	mapRelation := make(dirMapRelations, 0, len(host2client))
+	for k, v := range host2client{
+		mapRelation = append(mapRelation, dirMapRelation{filepath.Clean(k), filepath.Clean(v)})
+	}
+	sort.Sort(mapRelation)
+
+	return func(p string) string{
+		for _, r := range(mapRelation){
+			if strings.HasPrefix(p, r.hostDir){
+				return strings.Replace(p, r.hostDir, r.clientDir, 1)
+			}
+		}
+		return p
+	}
+}
+
 func (config *ProotConfig) PrepareArgs(args []string) ([]string, error) {
-	return args, nil
+	logger.Debugln("before process: ", config)
+
+	if strings.HasPrefix(config.RootPath, "$$R"){
+		config.RootPath = config.RootPath[len("$$R"):]
+		config.RootBindOption = "-R"
+	}else if strings.HasPrefix(config.RootPath, "$$S"){
+		config.RootPath = config.RootPath[len("$$S"):]
+		config.RootBindOption = "-S"
+	}else{
+		config.RootBindOption = "-r"
+	}
+
+	bindMap := make(map[string]string)
+	for i, s := range config.Bind{
+		if  strings.HasPrefix(s, "$$ENV"){
+			if envPath := searchEnv(); envPath!=""{
+				config.Bind[i] = strings.Replace(s, "$$ENV", envPath, 1)
+			}else{
+				logger.Fatalln("can not find executable env")
+			}
+		}
+
+		if m := filepath.SplitList(config.Bind[i]); len(m)==2{
+			bindMap[m[0]] = m[1]
+		}
+	}
+
+	directoryMap := make(map[string]string)
+	for _, s := range config.DirectoryMap{
+		if s=="$$BIND"{
+			for k,v := range bindMap{
+				directoryMap[k] = v
+			}
+		}else{
+			kv := strings.SplitN(s, "=", 2)
+
+			if  len(kv)!=1{
+				logger.Fatalln("directory map relation must in form of 'HostDir=ClientDir' but got: ", s)
+			}
+			
+			directoryMap[kv[0]] = kv[1]
+		}
+	}
+
+	directoryMapFunc := CleanPathMap(directoryMap)
+
+	if config.WorkDirectory == "$$CWD"{
+		if cwd, err := os.Getwd(); err==nil{
+			config.WorkDirectory = cwd
+		}
+	}
+	config.WorkDirectory = directoryMapFunc(config.WorkDirectory)
+
+	for i, s := range config.Env{
+		kv := strings.SplitN(s, "=", 2)
+
+		if  len(kv)==1{
+			kv = append(kv, os.Getenv(kv[0]))
+		}
+
+		if strings.HasSuffix(kv[0], "PATH"){
+			paths := filepath.SplitList(kv[1])
+			for j, p := range paths{
+				paths[j] = directoryMapFunc(p)
+			}
+			kv[1] = strings.Join(paths, string(filepath.ListSeparator))
+		}
+
+		config.Env[i] = strings.Join(kv, "=")
+	}
+
+	logger.Debugln("after process: ", config)
+
+	newArgs := make([]string, 0, len(args)*2)
+	newArgs = append(newArgs, config.RawOption...)
+	newArgs = append(newArgs, config.RootBindOption, config.RootPath)
+
+	for _, v := range config.Bind{
+		newArgs = append(newArgs, "-b", v)
+	}
+
+	newArgs = append(newArgs, "-w", config.WorkDirectory)
+
+	newArgs = append(newArgs, args...)
+
+	if len(config.Env)>0{
+		newArgs = append(newArgs, ENV)
+		newArgs = append(newArgs, config.Env...)
+	}
+
+	return newArgs, nil
 }
 
 func init() {

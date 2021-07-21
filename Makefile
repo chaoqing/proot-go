@@ -2,8 +2,18 @@ all: proot-go
 
 build: proot-go
 
+
+GOBUILD = go build
+GOENVS = env CGO_ENABLED=1
+ifdef PI
+GOENVS += env GOOS=linux GOARCH=arm GOARM=7
+endif
+ifdef Linux
+GOENVS += env GOOS=linux GOARCH=amd64
+endif
+
 proot-go: libproot
-	go build -o proot-go
+	$(GOENVS) $(GOBUILD) -o proot-go
 
 libproot: src/GNUmakefile
 	@make -C src libproot.a

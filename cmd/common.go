@@ -30,7 +30,7 @@ func GoMain(args []string) {
 
 	config := NewProotConfig(goArgs)
 
-	if ok, err := config.FlagConfig.GetBool("go-verbose"); err==nil && ok {
+	if ok, err := config.FlagConfig.GetBool("go-verbose"); err == nil && ok {
 		logger.Level = logrus.DebugLevel
 	}
 
@@ -39,7 +39,7 @@ func GoMain(args []string) {
 	logger.Debugln("proot args: ", cArgs)
 	logger.Debugln("command args: ", cmdArgs)
 
-	if ok, err := config.FlagConfig.GetBool("go-help"); err==nil && ok  {
+	if ok, err := config.FlagConfig.GetBool("go-help"); err == nil && ok {
 		logger.Debugln("dropping extra flags: ", cArgs, cmdArgs)
 
 		config.Usage()
@@ -53,12 +53,12 @@ func GoMain(args []string) {
 		cmdArgs = append([]string{binName}, cmdArgs...)
 	}
 
-	if len(cmdArgs)>0{
+	if len(cmdArgs) > 0 {
 		if err := config.Load(); err == nil {
-			if cArgs, err := config.PrepareArgs(cArgs); err == nil {
+			if cArgs, err = config.PrepareArgs(cArgs); err == nil {
 				logger.Debugln("result args passed to c-proot: ", cArgs)
 			}
-		}else{
+		} else {
 			logger.Warningln(err)
 		}
 	}
