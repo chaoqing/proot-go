@@ -149,17 +149,21 @@ type ProotConfig struct {
 	RawOption []string
 
 	viperConfig *viper.Viper
-	flagConfig  *flag.FlagSet
+	FlagConfig  *flag.FlagSet
 }
 
-func NewProotConfig() *ProotConfig {
+func NewProotConfig(goArgs []string) *ProotConfig {
 	config := &ProotConfig{
 		viperConfig: viper.New(),
-		flagConfig: flag.NewFlagSet(PROOT_NAME, flag.ContinueOnError),
+		FlagConfig: flag.NewFlagSet(PROOT_NAME, flag.ContinueOnError),
 	}
 	config.viperConfig.SetEnvPrefix(PROOT_NAME)
 
-	ProotGoOptions.Register(config.viperConfig, config.flagConfig)
+	ProotGoOptions.Register(config.viperConfig, config.FlagConfig)
+
+	if err := config.FlagConfig.Parse(goArgs); err != nil {
+		logger.Fatalln("proot go command args error: ", err)
+	}
 
 	return config
 }
@@ -199,14 +203,10 @@ Raw *proot* helper:
 		}
 	}
 
-	fmt.Printf(usage, config.flagConfig.FlagUsages(), exampleContent)
+	fmt.Printf(usage, config.FlagConfig.FlagUsages(), exampleContent)
 }
 
-func (config *ProotConfig) Load(args []string) error {
-	if err := config.flagConfig.Parse(args); err != nil {
-		logger.Fatalln("proot go command args error: ", err)
-	}
-
+func (config *ProotConfig) Load() error {
 	v := config.viperConfig
 
 	v.SetConfigName(fmt.Sprintf(".%s", PROOT_NAME))
@@ -214,7 +214,7 @@ func (config *ProotConfig) Load(args []string) error {
 
 	configDir := "."
 	configPath := ""
-	if path, err := config.flagConfig.GetString("go-config"); err == nil && path != "" {
+	if path, err := config.FlagConfig.GetString("go-config"); err == nil && path != "" {
 		configPath = path
 	} else if path, ok := os.LookupEnv("PROOT_CONFIG"); ok && path != "" {
 		configPath = path
@@ -252,7 +252,7 @@ func (config *ProotConfig) Load(args []string) error {
 
 	if configPath == "" {
 		if err := v.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 				return fmt.Errorf("proot-go config file not found")
 			}
 			logger.Fatalln("proot-go config load error: ", err)
@@ -264,6 +264,8 @@ func (config *ProotConfig) Load(args []string) error {
 	if err := v.Unmarshal(config); err != nil {
 		logger.Fatalln("proot-go config load error: ", err)
 	}
+
+	logger.Debugln(config)
 
 	return nil
 }

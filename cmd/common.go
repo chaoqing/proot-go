@@ -28,10 +28,10 @@ func GoMain(args []string) {
 	binDir, binName := GetExecutableNameAndPath(args[0])
 	goArgs, cArgs, cmdArgs := SplitArgs(binName, args[1:])
 
-	for _, arg := range goArgs {
-		if arg == "--go-verbose" {
-			logger.Level = logrus.DebugLevel
-		}
+	config := NewProotConfig(goArgs)
+
+	if ok, err := config.FlagConfig.GetBool("go-verbose"); err==nil && ok {
+		logger.Level = logrus.DebugLevel
 	}
 
 	logger.Debugln("shell passed args: ", args)
@@ -39,17 +39,13 @@ func GoMain(args []string) {
 	logger.Debugln("proot args: ", cArgs)
 	logger.Debugln("command args: ", cmdArgs)
 
-	config := NewProotConfig()
+	if ok, err := config.FlagConfig.GetBool("go-help"); err==nil && ok  {
+		logger.Debugln("dropping extra flags: ", cArgs, cmdArgs)
 
-	for _, arg := range goArgs {
-		if arg == "--go-help" {
-			logger.Debugln("dropping extra flags: ", cArgs, cmdArgs)
+		config.Usage()
 
-			config.Usage()
-
-			cArgs = []string{"--help"}
-			cmdArgs = []string{}
-		}
+		cArgs = []string{"--help"}
+		cmdArgs = []string{}
 	}
 
 	if binName != PROOT_NAME {
@@ -58,12 +54,12 @@ func GoMain(args []string) {
 	}
 
 	if len(cmdArgs)>0{
-		if err := config.Load(goArgs); err == nil {
+		if err := config.Load(); err == nil {
 			if cArgs, err := config.PrepareArgs(cArgs); err == nil {
 				logger.Debugln("result args passed to c-proot: ", cArgs)
 			}
 		}else{
-			logger.Warningln("error", err)
+			logger.Warningln(err)
 		}
 	}
 

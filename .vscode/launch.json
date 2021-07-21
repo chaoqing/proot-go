@@ -15,6 +15,19 @@
                 "-test.run",
                 "Test_splitArgs"
             ]
+        },
+
+        {
+            "name": "Test_GoMain",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/cmd",
+            "args": [
+                "-test.v",
+                "-test.run",
+                "TestGoMain"
+            ]
         }
         
     ]
